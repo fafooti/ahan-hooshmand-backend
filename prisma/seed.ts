@@ -1,8 +1,9 @@
 import { Category, PrismaClient, Product } from '@prisma/client';
 
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
 
-
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -229,8 +230,13 @@ async function upsertProduct(
 
 
 async function main() {
+  const seedAdminPassword = process.env.SEED_ADMIN_PASSWORD;
 
-  const password = await bcrypt.hash('admin123', 10);
+  if (!seedAdminPassword) {
+    throw new Error('SEED_ADMIN_PASSWORD environment variable is required to run seed');
+  }
+
+  const password = await bcrypt.hash(seedAdminPassword, 10);
 
 
 

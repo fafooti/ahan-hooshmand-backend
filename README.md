@@ -8,7 +8,7 @@ REST API for the Digital Price Board system.
 - Express.js
 - TypeScript
 - Prisma ORM
-- MySQL
+- PostgreSQL
 
 ## Project Structure
 
@@ -33,11 +33,24 @@ prisma/
 
 ## Getting Started
 
-1. Copy `.env.example` to `.env` and configure your database URL.
-2. Install dependencies: `npm install`
-3. Generate Prisma client: `npm run prisma:generate`
-4. Run migrations: `npm run prisma:migrate`
-5. Start dev server: `npm run dev`
+1. Copy `.env.example` to `.env` and configure your environment variables.
+2. Ensure PostgreSQL is running and `DATABASE_URL` points to your database.
+3. Install dependencies: `npm install`
+4. Generate Prisma client: `npm run prisma:generate`
+5. Run migrations: `npm run prisma:migrate` (development) or `npm run prisma:migrate:deploy` (production)
+6. (Optional) Seed data: `npm run prisma:seed` — requires `SEED_ADMIN_PASSWORD` in `.env`
+7. Start dev server: `npm run dev`
+
+## Production Deployment
+
+See `deploy/nginx.conf.example` and `ecosystem.config.cjs` for PM2 + Nginx setup on Ubuntu 22.04.
+
+```bash
+chmod +x deploy/deploy.sh
+./deploy/deploy.sh
+pm2 start ecosystem.config.cjs --env production
+pm2 save
+```
 
 ## Scripts
 
@@ -47,5 +60,7 @@ prisma/
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled production build |
 | `npm run prisma:generate` | Generate Prisma client |
-| `npm run prisma:migrate` | Run database migrations |
+| `npm run prisma:migrate` | Run database migrations (development) |
+| `npm run prisma:migrate:deploy` | Apply migrations in production |
+| `npm run prisma:seed` | Seed database (requires `SEED_ADMIN_PASSWORD`) |
 | `npm run prisma:studio` | Open Prisma Studio |

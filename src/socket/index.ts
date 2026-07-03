@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import { getCorsOptions } from '../config';
 
 export type RealtimeEvent =
   | 'product:created'
@@ -23,7 +24,7 @@ let io: Server | null = null;
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      ...getCorsOptions(),
       methods: ['GET', 'POST'],
     },
   });

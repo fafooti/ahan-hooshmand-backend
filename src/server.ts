@@ -1,7 +1,9 @@
 import { createServer } from 'http';
 import { createApp } from './app';
-import { config } from './config';
+import { config, validateProductionConfig } from './config';
 import { initSocket } from './socket';
+
+validateProductionConfig();
 
 if (!config.jwtSecret) {
   throw new Error('JWT_SECRET environment variable is required');

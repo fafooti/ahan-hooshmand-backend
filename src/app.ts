@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express, { Express } from 'express';
 import helmet from 'helmet';
+import { getCorsOptions } from './config';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import routes from './routes';
@@ -8,8 +9,9 @@ import routes from './routes';
 export function createApp(): Express {
   const app = express();
 
+  app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(cors());
+  app.use(cors(getCorsOptions()));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
