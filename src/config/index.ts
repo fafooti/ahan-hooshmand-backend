@@ -23,8 +23,16 @@ export const config = {
   corsOrigins: parseCorsOrigins(process.env.CORS_ORIGIN ?? process.env.FRONTEND_URL),
 } as const;
 
+const DEV_CORS_ORIGINS = [
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+];
+
 export function getCorsOptions() {
-  const origins = config.corsOrigins;
+  const origins =
+    config.nodeEnv === 'development'
+      ? [...new Set([...config.corsOrigins, ...DEV_CORS_ORIGINS])]
+      : config.corsOrigins;
 
   return {
     origin: origins.length > 0 ? origins : false,
