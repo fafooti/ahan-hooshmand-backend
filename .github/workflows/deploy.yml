@@ -1,17 +1,30 @@
+name: Deploy Backend
+
 on:
   push:
     branches:
       - main
-...
-script: |
-  cd /home/ubuntu/ahan-hooshmand-backend
 
-  git pull origin main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-  npm install
+    steps:
+      - name: Deploy Backend to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/ahan-hooshmand-backend
 
-  npm run build
+            git pull origin main
 
-  pm2 restart ahan-hooshmand-api
+            npm install
 
-  pm2 save
+            npm run build
+
+            pm2 restart ahan-hooshmand-api
+
+            pm2 save
