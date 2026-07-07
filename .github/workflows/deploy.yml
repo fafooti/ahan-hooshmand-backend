@@ -1,0 +1,17 @@
+on:
+  push:
+    branches:
+      - main
+...
+script: |
+  cd /home/ubuntu/ahan-hooshmand-backend
+
+  git pull origin main
+
+  npm install
+
+  npm run build
+
+  pm2 restart ahan-hooshmand-api
+
+  pm2 save
