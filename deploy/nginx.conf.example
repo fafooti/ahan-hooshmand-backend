@@ -1,12 +1,28 @@
 # Nginx reverse-proxy example for Ubuntu 22.04
-# Replace YOUR_DOMAIN with your production domain.
-# Install: sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/ahan-hooshmand
-# Enable:  sudo ln -s /etc/nginx/sites-available/ahan-hooshmand /etc/nginx/sites-enabled/
-# Test:    sudo nginx -t && sudo systemctl reload nginx
+# Replace YOUR_DOMAIN with your production domain or server IP.
+#
+# Install:
+#   sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/ahan-hooshmand
+#   sudo ln -sf /etc/nginx/sites-available/ahan-hooshmand /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Routes:
+#   /        → Next.js frontend (port 3001)
+#   /api/    → Express API + Socket.IO at /api/socket.io (port 3000)
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
 
 upstream ahan_hooshmand_api {
     server 127.0.0.1:3000;
     keepalive 64;
+}
+
+upstream ahan_hooshmand_frontend {
+    server 127.0.0.1:3001;
+    keepalive 32;
 }
 
 server {
@@ -18,9 +34,9 @@ server {
 
     client_max_body_size 10M;
 
-    # Next.js frontend (adjust port if frontend runs separately)
+    # Next.js frontend
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://ahan_hooshmand_frontend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -28,27 +44,19 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Express REST API
+    # Express REST API + Socket.IO (/api/socket.io)
     location /api/ {
         proxy_pass http://ahan_hooshmand_api;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Socket.IO
-    location /socket.io/ {
-        proxy_pass http://ahan_hooshmand_api;
-        proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+        proxy_buffering off;
     }
 }
 
@@ -60,5 +68,28 @@ server {
 #     ssl_certificate     /etc/letsencrypt/live/YOUR_DOMAIN/fullchain.pem;
 #     ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem;
 #
-#     # ... repeat location blocks from the HTTP server above ...
+#     client_max_body_size 10M;
+#
+#     location / {
+#         proxy_pass http://ahan_hooshmand_frontend;
+#         proxy_http_version 1.1;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+#
+#     location /api/ {
+#         proxy_pass http://ahan_hooshmand_api;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection $connection_upgrade;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_read_timeout 86400;
+#         proxy_send_timeout 86400;
+#         proxy_buffering off;
+#     }
 # }

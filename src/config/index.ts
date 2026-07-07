@@ -28,14 +28,18 @@ const DEV_CORS_ORIGINS = [
   'http://127.0.0.1:3001',
 ];
 
-export function getCorsOptions() {
-  const origins =
-    config.nodeEnv === 'development'
-      ? [...new Set([...config.corsOrigins, ...DEV_CORS_ORIGINS])]
-      : config.corsOrigins;
+function resolveCorsOrigins(): string[] | boolean {
+  if (config.nodeEnv === 'development') {
+    const merged = [...new Set([...config.corsOrigins, ...DEV_CORS_ORIGINS])];
+    return merged.length > 0 ? merged : true;
+  }
 
+  return config.corsOrigins.length > 0 ? config.corsOrigins : false;
+}
+
+export function getCorsOptions() {
   return {
-    origin: origins.length > 0 ? origins : false,
+    origin: resolveCorsOrigins(),
     credentials: true,
   };
 }

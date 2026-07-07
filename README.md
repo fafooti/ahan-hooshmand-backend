@@ -43,13 +43,21 @@ prisma/
 
 ## Production Deployment
 
-See `deploy/nginx.conf.example` and `ecosystem.config.cjs` for PM2 + Nginx setup on Ubuntu 22.04.
+See `deploy/nginx.conf.example`, `.env.production.example`, and `ecosystem.config.cjs` for PM2 + Nginx setup on Ubuntu 22.04.
+
+**Production checklist**
+
+1. Copy `.env.production.example` → `.env` and set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `FRONTEND_URL`.
+2. `CORS_ORIGIN` / `FRONTEND_URL` must match your public site (e.g. `http://188.121.122.93`).
+3. Apply Nginx config from `deploy/nginx.conf.example` — `/api/` proxies both REST and Socket.IO (`/api/socket.io`).
+4. Build and start the API with PM2.
 
 ```bash
 chmod +x deploy/deploy.sh
 ./deploy/deploy.sh
 pm2 start ecosystem.config.cjs --env production
 pm2 save
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ## Scripts

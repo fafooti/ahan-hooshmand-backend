@@ -20,7 +20,7 @@ export type RealtimePayload = {
 };
 
 let io: Server | null = null;
-const SOCKET_IO_PATH = '/api/socket.io';
+export const SOCKET_IO_PATH = '/api/socket.io';
 
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
@@ -29,6 +29,8 @@ export function initSocket(httpServer: HttpServer): Server {
       ...getCorsOptions(),
       methods: ['GET', 'POST'],
     },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
   });
 
   io.on('connection', (socket: Socket) => {
