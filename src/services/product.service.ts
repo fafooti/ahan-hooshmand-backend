@@ -19,6 +19,8 @@ async function ensureCategoryExists(categoryId: number): Promise<void> {
 
 function pickProductSnapshot(product: {
   name: string;
+  buyPrice: number;
+  factoryPrice: number;
   price: number;
   stock: number;
   description: string | null;
@@ -28,6 +30,8 @@ function pickProductSnapshot(product: {
 }) {
   return {
     name: product.name,
+    buyPrice: product.buyPrice,
+    factoryPrice: product.factoryPrice,
     price: product.price,
     stock: product.stock,
     description: product.description,
@@ -62,6 +66,8 @@ export const productService = {
 
     const product = await productRepository.create({
       name: input.name,
+      buyPrice: input.buyPrice,
+      factoryPrice: input.factoryPrice,
       price: input.price,
       stock: input.stock ?? 0,
       description: input.description ?? null,
@@ -102,6 +108,8 @@ export const productService = {
         where: { id },
         data: {
           ...(input.name !== undefined && { name: input.name }),
+          ...(input.buyPrice !== undefined && { buyPrice: input.buyPrice }),
+          ...(input.factoryPrice !== undefined && { factoryPrice: input.factoryPrice }),
           ...(input.price !== undefined && { price: input.price }),
           ...(input.stock !== undefined && { stock: input.stock }),
           ...(input.description !== undefined && { description: input.description }),

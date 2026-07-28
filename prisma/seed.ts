@@ -13,7 +13,10 @@ const UNIT = 'کیلو';
 
 
 
-const seedData: { category: string; products: { name: string; price: number; stock?: number }[] }[] = [
+const seedData: {
+  category: string;
+  products: { name: string; buyPrice: number; factoryPrice: number; price: number; stock?: number }[];
+}[] = [
 
   {
 
@@ -21,11 +24,11 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'قوطی 2×2', price: 60000, stock: 500 },
+      { name: 'قوطی 2×2', buyPrice: 60000, factoryPrice: 60000, price: 60000, stock: 500 },
 
-      { name: 'قوطی 3×3', price: 70000, stock: 400 },
+      { name: 'قوطی 3×3', buyPrice: 70000, factoryPrice: 70000, price: 70000, stock: 400 },
 
-      { name: 'قوطی 4×4', price: 90000, stock: 300 },
+      { name: 'قوطی 4×4', buyPrice: 90000, factoryPrice: 90000, price: 90000, stock: 300 },
 
     ],
 
@@ -37,9 +40,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'نبشی 3', price: 85000, stock: 600 },
+      { name: 'نبشی 3', buyPrice: 85000, factoryPrice: 85000, price: 85000, stock: 600 },
 
-      { name: 'نبشی 5', price: 120000, stock: 350 },
+      { name: 'نبشی 5', buyPrice: 120000, factoryPrice: 120000, price: 120000, stock: 350 },
 
     ],
 
@@ -51,9 +54,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'ناودانی 6', price: 80000, stock: 450 },
+      { name: 'ناودانی 6', buyPrice: 80000, factoryPrice: 80000, price: 80000, stock: 450 },
 
-      { name: 'ناودانی 8', price: 95000, stock: 280 },
+      { name: 'ناودانی 8', buyPrice: 95000, factoryPrice: 95000, price: 95000, stock: 280 },
 
     ],
 
@@ -65,11 +68,11 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'میلگرد 12', price: 98000, stock: 800 },
+      { name: 'میلگرد 12', buyPrice: 98000, factoryPrice: 98000, price: 98000, stock: 800 },
 
-      { name: 'میلگرد 14', price: 110000, stock: 700 },
+      { name: 'میلگرد 14', buyPrice: 110000, factoryPrice: 110000, price: 110000, stock: 700 },
 
-      { name: 'میلگرد 16', price: 125000, stock: 550 },
+      { name: 'میلگرد 16', buyPrice: 125000, factoryPrice: 125000, price: 125000, stock: 550 },
 
     ],
 
@@ -81,9 +84,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'تیرآهن 14', price: 135000, stock: 200 },
+      { name: 'تیرآهن 14', buyPrice: 135000, factoryPrice: 135000, price: 135000, stock: 200 },
 
-      { name: 'تیرآهن 16', price: 150000, stock: 180 },
+      { name: 'تیرآهن 16', buyPrice: 150000, factoryPrice: 150000, price: 150000, stock: 180 },
 
     ],
 
@@ -95,9 +98,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'ورق سیاه 2 میل', price: 145000, stock: 150 },
+      { name: 'ورق سیاه 2 میل', buyPrice: 145000, factoryPrice: 145000, price: 145000, stock: 150 },
 
-      { name: 'ورق سیاه 3 میل', price: 160000, stock: 120 },
+      { name: 'ورق سیاه 3 میل', buyPrice: 160000, factoryPrice: 160000, price: 160000, stock: 120 },
 
     ],
 
@@ -109,9 +112,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'لوله 2 اینچ', price: 140000, stock: 220 },
+      { name: 'لوله 2 اینچ', buyPrice: 140000, factoryPrice: 140000, price: 140000, stock: 220 },
 
-      { name: 'لوله 3 اینچ', price: 165000, stock: 190 },
+      { name: 'لوله 3 اینچ', buyPrice: 165000, factoryPrice: 165000, price: 165000, stock: 190 },
 
     ],
 
@@ -123,9 +126,9 @@ const seedData: { category: string; products: { name: string; price: number; sto
 
     products: [
 
-      { name: 'سپری 3', price: 80000, stock: 320 },
+      { name: 'سپری 3', buyPrice: 80000, factoryPrice: 80000, price: 80000, stock: 320 },
 
-      { name: 'سپری 4', price: 90000, stock: 290 },
+      { name: 'سپری 4', buyPrice: 90000, factoryPrice: 90000, price: 90000, stock: 290 },
 
     ],
 
@@ -171,6 +174,10 @@ async function upsertProduct(
 
   name: string,
 
+  buyPrice: number,
+
+  factoryPrice: number,
+
   price: number,
 
   stock: number,
@@ -188,6 +195,10 @@ async function upsertProduct(
   const data = {
 
     name,
+
+    buyPrice,
+
+    factoryPrice,
 
     price,
 
@@ -303,6 +314,10 @@ async function main() {
         category.id,
 
         item.name,
+
+        item.buyPrice,
+
+        item.factoryPrice,
 
         item.price,
 

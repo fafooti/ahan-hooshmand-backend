@@ -66,6 +66,10 @@ model Product {
 
   name           String
 
+  buyPrice       Float          @default(0)
+
+  factoryPrice   Float          @default(0)
+
   price          Float
 
   stock          Int            @default(0)

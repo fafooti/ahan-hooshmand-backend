@@ -8,6 +8,10 @@ export interface CreateProductInput {
 
   name: string;
 
+  buyPrice: number;
+
+  factoryPrice: number;
+
   price: number;
 
   stock?: number;
@@ -27,6 +31,10 @@ export interface CreateProductInput {
 export interface UpdateProductInput {
 
   name?: string;
+
+  buyPrice?: number;
+
+  factoryPrice?: number;
 
   price?: number;
 
@@ -118,7 +126,7 @@ function parseNonNegativeInteger(value: unknown, fieldName: string): number {
 
 
 
-function parsePrice(value: unknown): number {
+function parsePrice(value: unknown, fieldName = 'Price'): number {
 
   const parsed = typeof value === 'string' ? Number(value) : value;
 
@@ -126,7 +134,7 @@ function parsePrice(value: unknown): number {
 
   if (typeof parsed !== 'number' || Number.isNaN(parsed) || parsed < 0) {
 
-    throw new AppError(400, 'Price must be a non-negative number');
+    throw new AppError(400, `${fieldName} must be a non-negative number`);
 
   }
 
@@ -294,7 +302,11 @@ export function validateCreateProductInput(body: unknown): CreateProductInput {
 
     name: parseNonEmptyString(input.name, 'Name'),
 
-    price: parsePrice(input.price),
+    buyPrice: parsePrice(input.buyPrice, 'Buy price'),
+
+    factoryPrice: parsePrice(input.factoryPrice, 'Factory price'),
+
+    price: parsePrice(input.price, 'Price'),
 
     stock: input.stock !== undefined ? parseNonNegativeInteger(input.stock, 'Stock') : undefined,
 
@@ -338,7 +350,23 @@ export function validateUpdateProductInput(body: unknown): UpdateProductInput {
 
   if ('price' in input) {
 
-    update.price = parsePrice(input.price);
+    update.price = parsePrice(input.price, 'Price');
+
+  }
+
+
+
+  if ('buyPrice' in input) {
+
+    update.buyPrice = parsePrice(input.buyPrice, 'Buy price');
+
+  }
+
+
+
+  if ('factoryPrice' in input) {
+
+    update.factoryPrice = parsePrice(input.factoryPrice, 'Factory price');
 
   }
 
@@ -438,7 +466,7 @@ export function validateBulkPriceUpdateInput(body: unknown): BulkPriceUpdateInpu
 
     const id = parsePositiveInteger(update.id, 'Product id');
 
-    const price = parsePrice(update.price);
+    const price = parsePrice(update.price, 'Price');
 
 
 

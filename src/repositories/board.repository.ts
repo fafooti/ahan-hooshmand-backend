@@ -8,6 +8,10 @@ const activeProductSelect = {
 
   name: true,
 
+  buyPrice: true,
+
+  factoryPrice: true,
+
   price: true,
 
   unit: true,
