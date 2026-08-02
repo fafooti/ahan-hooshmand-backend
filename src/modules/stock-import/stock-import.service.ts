@@ -1,8 +1,18 @@
 import xlsx from 'xlsx';
 import { prisma } from '../../prisma/client';
+import { productRepository } from '../../repositories/product.repository';
+import { auditService } from '../../services/audit.service';
+import { emitBoardUpdated, emitRealtime } from '../../socket';
 import { AppError } from '../../utils/AppError';
 import { validateStockImportRow } from './stock-import.validator';
-import { StockImportParsedRow, StockImportResult } from './stock-import.types';
+import {
+  StockImportApplyInput,
+  StockImportApplyResult,
+  StockImportMatchedRow,
+  StockImportParsedRow,
+  StockImportResult,
+  StockImportUnmatchedRow,
+} from './stock-import.types';
 
 const TARGET_WORKSHEETS = ['موجودی بهزیست', 'موجودی شهرک', 'استوار'] as const;
 
@@ -239,21 +249,30 @@ export const stockImportService = {
       select: {
         id: true,
         name: true,
+        stock: true,
       },
     });
 
-    const productNameMap = new Map<string, { id: number; name: string }>();
+    const productNameMap = new Map<
+      string,
+      { id: number; name: string; stock: number }
+    >();
     const dbNames = products.map((product) => product.name);
 
     for (const product of products) {
       const trimmedName = product.name.trim();
 
       if (!productNameMap.has(trimmedName)) {
-        productNameMap.set(trimmedName, { id: product.id, name: product.name });
+        productNameMap.set(trimmedName, {
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+        });
       }
     }
 
-    const unmatchedRows = [];
+    const matchedRows: StockImportMatchedRow[] = [];
+    const unmatchedRows: StockImportUnmatchedRow[] = [];
 
     for (const row of rows) {
       const product = productNameMap.get(row.name.trim());
@@ -264,15 +283,68 @@ export const stockImportService = {
       }
 
       console.log('MATCHED:', row.name, product.name);
+
+      matchedRows.push({
+        row: row.row,
+        name: row.name,
+        productId: product.id,
+        productName: product.name,
+        stock: row.stock,
+        currentStock: product.stock,
+      });
     }
 
     analyzeUnmatchedRows(unmatchedRows, dbNames);
 
     return {
       success: true,
-      matched: rows.length - unmatchedRows.length,
+      matched: matchedRows.length,
       unmatched: unmatchedRows.length,
+      matchedRows,
       unmatchedRows,
+    };
+  },
+
+  async applyImport(
+    input: StockImportApplyInput,
+    userId?: number,
+  ): Promise<StockImportApplyResult> {
+    const ids = input.updates.map((update) => update.productId);
+    const products = await productRepository.findByIds(ids);
+
+    if (products.length !== ids.length) {
+      throw new AppError(404, 'One or more products not found');
+    }
+
+    const updatedProducts = await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const update of input.updates) {
+        const product = await tx.product.update({
+          where: { id: update.productId },
+          data: { stock: update.stock },
+          include: { category: true },
+        });
+
+        results.push(product);
+      }
+
+      return results;
+    });
+
+    await auditService.log({
+      action: 'STOCK_IMPORT_APPLIED',
+      entityType: 'product',
+      userId,
+      newValues: { updates: input.updates },
+    });
+
+    emitRealtime('products:bulk-updated', updatedProducts);
+    emitBoardUpdated();
+
+    return {
+      success: true,
+      updated: updatedProducts.length,
     };
   },
 };

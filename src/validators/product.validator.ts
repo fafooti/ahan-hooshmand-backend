@@ -106,15 +106,41 @@ function parsePositiveInteger(value: unknown, fieldName: string): number {
 
 
 
-function parseNonNegativeInteger(value: unknown, fieldName: string): number {
+function parseNonNegativeNumber(value: unknown, fieldName: string): number {
 
-  const parsed = typeof value === 'string' ? Number(value) : value;
+  if (value === null || value === undefined) {
+
+    throw new AppError(400, `${fieldName} is required`);
+
+  }
 
 
 
-  if (typeof parsed !== 'number' || !Number.isInteger(parsed) || parsed < 0) {
+  if (typeof value === 'string' && value.trim().length === 0) {
 
-    throw new AppError(400, `${fieldName} must be a non-negative integer`);
+    throw new AppError(400, `${fieldName} must be a non-negative number`);
+
+  }
+
+
+
+  const parsed = typeof value === 'string' ? Number(value.trim()) : value;
+
+
+
+  if (
+
+    typeof parsed !== 'number' ||
+
+    Number.isNaN(parsed) ||
+
+    !Number.isFinite(parsed) ||
+
+    parsed < 0
+
+  ) {
+
+    throw new AppError(400, `${fieldName} must be a non-negative number`);
 
   }
 
@@ -308,7 +334,7 @@ export function validateCreateProductInput(body: unknown): CreateProductInput {
 
     price: parsePrice(input.price, 'Price'),
 
-    stock: input.stock !== undefined ? parseNonNegativeInteger(input.stock, 'Stock') : undefined,
+    stock: input.stock !== undefined ? parseNonNegativeNumber(input.stock, 'Stock') : undefined,
 
     description: parseOptionalString(input.description),
 
@@ -374,7 +400,7 @@ export function validateUpdateProductInput(body: unknown): UpdateProductInput {
 
   if ('stock' in input) {
 
-    update.stock = parseNonNegativeInteger(input.stock, 'Stock');
+    update.stock = parseNonNegativeNumber(input.stock, 'Stock');
 
   }
 

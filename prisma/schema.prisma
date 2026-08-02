@@ -72,7 +72,7 @@ model Product {
 
   price          Float
 
-  stock          Int            @default(0)
+  stock          Float         @default(0)
 
   description    String?
 

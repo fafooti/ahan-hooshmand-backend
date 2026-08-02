@@ -10,6 +10,10 @@ router.use(authenticate);
 
 router.get('/', productController.list);
 router.post(
+  '/import-stock/apply',
+  stockImportController.applyImport,
+);
+router.post(
   '/import-stock',
   stockImportUpload.single('file'),
   stockImportController.handleUploadError,

@@ -1,7 +1,12 @@
 import multer from 'multer';
 import path from 'path';
 import { AppError } from '../../utils/AppError';
-import { StockImportParsedRow, StockImportStockValue } from './stock-import.types';
+import {
+  StockImportApplyInput,
+  StockImportApplyUpdateItem,
+  StockImportParsedRow,
+  StockImportStockValue,
+} from './stock-import.types';
 
 const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.xls']);
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
@@ -98,4 +103,87 @@ export function validateStockImportRow(
     name: rawName.trim(),
     stock: parseStockValue(rawStock),
   };
+}
+
+function parsePositiveInteger(value: unknown, fieldName: string): number {
+  const parsed = typeof value === 'string' ? Number(value) : value;
+
+  if (typeof parsed !== 'number' || !Number.isInteger(parsed) || parsed <= 0) {
+    throw new AppError(400, `${fieldName} must be a positive integer`);
+  }
+
+  return parsed;
+}
+
+function parseNonNegativeNumber(value: unknown, fieldName: string): number {
+  if (value === null || value === undefined) {
+    throw new AppError(400, `${fieldName} is required`);
+  }
+
+  if (typeof value === 'string' && value.trim().length === 0) {
+    throw new AppError(400, `${fieldName} must be a non-negative number`);
+  }
+
+  const parsed = typeof value === 'string' ? Number(value.trim()) : value;
+
+  if (
+    typeof parsed !== 'number' ||
+    Number.isNaN(parsed) ||
+    !Number.isFinite(parsed) ||
+    parsed < 0
+  ) {
+    throw new AppError(400, `${fieldName} must be a non-negative number`);
+  }
+
+  return parsed;
+}
+
+export function validateStockImportApplyInput(body: unknown): StockImportApplyInput {
+  if (!body || typeof body !== 'object') {
+    throw new AppError(400, 'Invalid request body');
+  }
+
+  const input = body as Record<string, unknown>;
+
+  if (!Array.isArray(input.updates)) {
+    throw new AppError(400, 'Updates array is required');
+  }
+
+  if (input.updates.length === 0) {
+    throw new AppError(400, 'Updates array must not be empty');
+  }
+
+  const seenIds = new Set<number>();
+  const updates: StockImportApplyUpdateItem[] = input.updates.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new AppError(400, `Update at index ${index} is invalid`);
+    }
+
+    const update = item as Record<string, unknown>;
+
+    if (!('productId' in update)) {
+      throw new AppError(400, `Update at index ${index} is missing productId`);
+    }
+
+    if (!('stock' in update)) {
+      throw new AppError(400, `Update at index ${index} is missing stock`);
+    }
+
+    if (update.stock === null) {
+      throw new AppError(400, `Update at index ${index}: stock cannot be null`);
+    }
+
+    const productId = parsePositiveInteger(update.productId, 'Product id');
+    const stock = parseNonNegativeNumber(update.stock, 'Stock');
+
+    if (seenIds.has(productId)) {
+      throw new AppError(400, `Duplicate product id: ${productId}`);
+    }
+
+    seenIds.add(productId);
+
+    return { productId, stock };
+  });
+
+  return { updates };
 }

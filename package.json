@@ -14,6 +14,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:stock-import": "tsx prisma/seed-stock-import-products.ts",
+    "prisma:reset-excel-products": "tsx prisma/reset-excel-products.ts",
     "prisma:extract:excel-names": "tsx prisma/extract-excel-product-names.ts"
   },
   "prisma": {
