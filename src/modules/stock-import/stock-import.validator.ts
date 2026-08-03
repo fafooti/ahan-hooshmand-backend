@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import { AppError } from '../../utils/AppError';
 import {
+  StockImportApplyCreateItem,
   StockImportApplyInput,
   StockImportApplyUpdateItem,
   StockImportParsedRow,
@@ -138,6 +139,14 @@ function parseNonNegativeNumber(value: unknown, fieldName: string): number {
   return parsed;
 }
 
+function parseNonEmptyName(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new AppError(400, `${fieldName} is required`);
+  }
+
+  return value.trim();
+}
+
 export function validateStockImportApplyInput(body: unknown): StockImportApplyInput {
   if (!body || typeof body !== 'object') {
     throw new AppError(400, 'Invalid request body');
@@ -145,16 +154,26 @@ export function validateStockImportApplyInput(body: unknown): StockImportApplyIn
 
   const input = body as Record<string, unknown>;
 
-  if (!Array.isArray(input.updates)) {
-    throw new AppError(400, 'Updates array is required');
+  const rawUpdates = input.updates;
+  const rawCreates = input.creates;
+
+  if (rawUpdates !== undefined && !Array.isArray(rawUpdates)) {
+    throw new AppError(400, 'Updates must be an array');
   }
 
-  if (input.updates.length === 0) {
-    throw new AppError(400, 'Updates array must not be empty');
+  if (rawCreates !== undefined && !Array.isArray(rawCreates)) {
+    throw new AppError(400, 'Creates must be an array');
+  }
+
+  const updateItems = Array.isArray(rawUpdates) ? rawUpdates : [];
+  const createItems = Array.isArray(rawCreates) ? rawCreates : [];
+
+  if (updateItems.length === 0 && createItems.length === 0) {
+    throw new AppError(400, 'At least one update or create item is required');
   }
 
   const seenIds = new Set<number>();
-  const updates: StockImportApplyUpdateItem[] = input.updates.map((item, index) => {
+  const updates: StockImportApplyUpdateItem[] = updateItems.map((item, index) => {
     if (!item || typeof item !== 'object') {
       throw new AppError(400, `Update at index ${index} is invalid`);
     }
@@ -185,5 +204,37 @@ export function validateStockImportApplyInput(body: unknown): StockImportApplyIn
     return { productId, stock };
   });
 
-  return { updates };
+  const seenNames = new Set<string>();
+  const creates: StockImportApplyCreateItem[] = createItems.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new AppError(400, `Create at index ${index} is invalid`);
+    }
+
+    const create = item as Record<string, unknown>;
+
+    if (!('name' in create)) {
+      throw new AppError(400, `Create at index ${index} is missing name`);
+    }
+
+    if (!('stock' in create)) {
+      throw new AppError(400, `Create at index ${index} is missing stock`);
+    }
+
+    if (create.stock === null) {
+      throw new AppError(400, `Create at index ${index}: stock cannot be null`);
+    }
+
+    const name = parseNonEmptyName(create.name, 'Product name');
+    const stock = parseNonNegativeNumber(create.stock, 'Stock');
+
+    if (seenNames.has(name)) {
+      throw new AppError(400, `Duplicate product name: ${name}`);
+    }
+
+    seenNames.add(name);
+
+    return { name, stock };
+  });
+
+  return { updates, creates };
 }

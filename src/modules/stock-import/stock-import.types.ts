@@ -34,11 +34,18 @@ export interface StockImportApplyUpdateItem {
   stock: number;
 }
 
+export interface StockImportApplyCreateItem {
+  name: string;
+  stock: number;
+}
+
 export interface StockImportApplyInput {
   updates: StockImportApplyUpdateItem[];
+  creates: StockImportApplyCreateItem[];
 }
 
 export interface StockImportApplyResult {
   success: true;
   updated: number;
+  created: number;
 }

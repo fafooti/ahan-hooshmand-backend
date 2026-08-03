@@ -6,6 +6,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import xlsx from 'xlsx';
+import { inferCategory } from '../src/modules/stock-import/infer-category';
 
 dotenv.config();
 
@@ -15,40 +16,12 @@ const UNIT = 'کیلو';
 const TARGET_WORKSHEETS = ['موجودی بهزیست', 'موجودی شهرک', 'استوار'] as const;
 const PRODUCT_NAME_HEADERS = new Set(['نام کالا', 'نام', 'شرح کالا', 'شرح محصول']);
 
-const CATEGORY_RULES: { category: string; match: (name: string) => boolean }[] = [
-  { category: 'میلگرد', match: (name) => name.includes('میلگرد') },
-  { category: 'نبشی', match: (name) => name.includes('نبشی') },
-  { category: 'ناودانی', match: (name) => name.includes('ناودانی') },
-  { category: 'قوطی', match: (name) => name.includes('قوطی') },
-  { category: 'ورق', match: (name) => name.includes('ورق') },
-  { category: 'تیرآهن', match: (name) => /تیر\s*آهن|تیرآهن|تیراهن/.test(name) },
-  { category: 'لوله', match: (name) => name.includes('لوله') },
-  { category: 'سپری', match: (name) => name.includes('سپری') },
-  { category: 'تسمه', match: (name) => name.includes('تسمه') },
-  { category: 'پانچ', match: (name) => name.includes('پانچ') },
-  { category: 'توری', match: (name) => name.includes('توری') },
-  { category: 'ستونی', match: (name) => name.includes('ستونی') },
-  { category: 'چهارسو', match: (name) => name.includes('چهارسو') },
-  { category: 'لقمه', match: (name) => name.includes('لقمه') },
-  { category: 'پروفیل', match: (name) => name.includes('پروفیل') || name.includes('چهارچوبی') },
-];
-
 function cellToString(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
   }
 
   return String(value).trim();
-}
-
-function inferCategory(name: string): string {
-  for (const rule of CATEGORY_RULES) {
-    if (rule.match(name)) {
-      return rule.category;
-    }
-  }
-
-  return 'سایر';
 }
 
 function resolveExcelPath(): string {

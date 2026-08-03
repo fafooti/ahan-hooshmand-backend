@@ -4,6 +4,7 @@ import { productRepository } from '../../repositories/product.repository';
 import { auditService } from '../../services/audit.service';
 import { emitBoardUpdated, emitRealtime } from '../../socket';
 import { AppError } from '../../utils/AppError';
+import { inferCategory } from './infer-category';
 import { validateStockImportRow } from './stock-import.validator';
 import {
   StockImportApplyInput,
@@ -13,6 +14,9 @@ import {
   StockImportResult,
   StockImportUnmatchedRow,
 } from './stock-import.types';
+
+const DEFAULT_UNIT = 'کیلو';
+const DEFAULT_PRICE = 0;
 
 const TARGET_WORKSHEETS = ['موجودی بهزیست', 'موجودی شهرک', 'استوار'] as const;
 
@@ -309,42 +313,134 @@ export const stockImportService = {
     input: StockImportApplyInput,
     userId?: number,
   ): Promise<StockImportApplyResult> {
-    const ids = input.updates.map((update) => update.productId);
-    const products = await productRepository.findByIds(ids);
+    if (input.updates.length > 0) {
+      const ids = input.updates.map((update) => update.productId);
+      const products = await productRepository.findByIds(ids);
 
-    if (products.length !== ids.length) {
-      throw new AppError(404, 'One or more products not found');
+      if (products.length !== ids.length) {
+        throw new AppError(404, 'One or more products not found');
+      }
     }
 
-    const updatedProducts = await prisma.$transaction(async (tx) => {
-      const results = [];
+    const { updatedProducts, createdProducts } = await prisma.$transaction(
+      async (tx) => {
+        const updated = [];
+        const created = [];
+        const categoryIdByName = new Map<string, number>();
 
-      for (const update of input.updates) {
-        const product = await tx.product.update({
-          where: { id: update.productId },
-          data: { stock: update.stock },
-          include: { category: true },
-        });
+        async function resolveCategoryId(categoryName: string): Promise<number> {
+          const cached = categoryIdByName.get(categoryName);
+          if (cached !== undefined) {
+            return cached;
+          }
 
-        results.push(product);
-      }
+          const existing = await tx.category.findFirst({
+            where: { name: categoryName },
+          });
 
-      return results;
-    });
+          if (existing) {
+            categoryIdByName.set(categoryName, existing.id);
+            return existing.id;
+          }
+
+          const maxOrder = await tx.category.aggregate({
+            _max: { sortOrder: true },
+          });
+          const sortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
+
+          const createdCategory = await tx.category.create({
+            data: {
+              name: categoryName,
+              sortOrder,
+            },
+          });
+
+          categoryIdByName.set(categoryName, createdCategory.id);
+          return createdCategory.id;
+        }
+
+        for (const update of input.updates) {
+          const product = await tx.product.update({
+            where: { id: update.productId },
+            data: { stock: update.stock },
+            include: { category: true },
+          });
+
+          updated.push(product);
+        }
+
+        for (const create of input.creates) {
+          const name = create.name.trim();
+
+          // Exact-name race guard: if name appeared since preview, update stock instead.
+          const existingByName = await tx.product.findFirst({
+            where: { name },
+            include: { category: true },
+          });
+
+          if (existingByName) {
+            const product = await tx.product.update({
+              where: { id: existingByName.id },
+              data: { stock: create.stock },
+              include: { category: true },
+            });
+            updated.push(product);
+            continue;
+          }
+
+          const categoryName = inferCategory(name);
+          const categoryId = await resolveCategoryId(categoryName);
+
+          const product = await tx.product.create({
+            data: {
+              name,
+              stock: create.stock,
+              price: DEFAULT_PRICE,
+              buyPrice: DEFAULT_PRICE,
+              factoryPrice: DEFAULT_PRICE,
+              unit: DEFAULT_UNIT,
+              isActive: true,
+              priceUpdatedAt: new Date(),
+              categoryId,
+            },
+            include: { category: true },
+          });
+
+          created.push(product);
+        }
+
+        return { updatedProducts: updated, createdProducts: created };
+      },
+    );
 
     await auditService.log({
       action: 'STOCK_IMPORT_APPLIED',
       entityType: 'product',
       userId,
-      newValues: { updates: input.updates },
+      newValues: {
+        updates: input.updates,
+        creates: input.creates,
+        updated: updatedProducts.length,
+        created: createdProducts.length,
+      },
     });
 
-    emitRealtime('products:bulk-updated', updatedProducts);
-    emitBoardUpdated();
+    if (updatedProducts.length > 0) {
+      emitRealtime('products:bulk-updated', updatedProducts);
+    }
+
+    for (const product of createdProducts) {
+      emitRealtime('product:created', product);
+    }
+
+    if (updatedProducts.length > 0 || createdProducts.length > 0) {
+      emitBoardUpdated();
+    }
 
     return {
       success: true,
       updated: updatedProducts.length,
+      created: createdProducts.length,
     };
   },
 };
